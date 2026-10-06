@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 C5.0 dari Python (rpy2) menggunakan DATA ONLINE tanpa download manual.
-Revisi: loader Adult Income lebih robust (multi-URL, requests, headers) dan tambahan visualisasi PDF.
+Revisi: Fokus 100% pada dataset Adult Income, loader robust, dan visualisasi PDF.
 """
 
 import argparse
@@ -20,7 +20,6 @@ from rpy2.robjects import default_converter
 R('options(warn=-1)')
 try:
     R('suppressPackageStartupMessages(library(C50))')
-    # Package partykit sering dibutuhkan R untuk melakukan plot model pohon
     R('if(!require("partykit", quietly=TRUE)) install.packages("partykit")')
 except Exception:
     raise SystemExit("Paket R 'C50' atau 'partykit' bermasalah. Buka R lalu jalankan: install.packages(c('C50', 'partykit'))")
@@ -120,14 +119,6 @@ def load_adult():
     TARGET = "income"
     return df, TARGET
 
-def load_iris():
-    from sklearn.datasets import load_iris
-    iris = load_iris(as_frame=True)
-    df = iris.frame.copy()
-    df.rename(columns={"target": "label"}, inplace=True)
-    df["label"] = df["label"].map({i: n for i, n in enumerate(iris.target_names)})
-    return df, "label"
-
 def is_binary(series: pd.Series) -> bool:
     return len(series.dropna().unique()) == 2
 
@@ -153,7 +144,6 @@ def train_c50(df: pd.DataFrame, target: str, trials=25, minCases=10, CF=0.1, win
     ro.globalenv["minCases_val"]= ro.IntVector([int(minCases)])
     ro.globalenv["CF_val"]      = ro.FloatVector([float(CF)])
 
-    # Mengeksekusi pembuatan model dan pembuatan file PDF visualisasi langsung di R
     R('''
         tr_y <- as.factor(tr$`__label__`)
         tr_x <- tr[, setdiff(names(tr), "__label__"), drop=FALSE]
@@ -163,9 +153,7 @@ def train_c50(df: pd.DataFrame, target: str, trials=25, minCases=10, CF=0.1, win
         p_prob  <- tryCatch(predict(model, te, type="prob"), error=function(e) NULL)
         s <- capture.output(summary(model))
         
-        # --- Ekspor Visualisasi ke PDF ---
         pdf("c50_tree_visualization.pdf", width=30, height=20)
-        # Jika menggunakan boosting (trials > 1), R akan membuat plot untuk pohon pertama.
         plot(model)
         dev.off()
     ''')
@@ -196,9 +184,6 @@ def train_c50(df: pd.DataFrame, target: str, trials=25, minCases=10, CF=0.1, win
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dataset", choices=["adult","iris"], default="adult")
-    # Menggunakan trials=1 jika ingin visualisasi pohon tunggal yang rapi, 
-    # karena jika trials=25 (boosting) grafiknya bisa menjadi sangat kompleks.
     ap.add_argument("--trials", type=int, default=1) 
     ap.add_argument("--mincases", type=int, default=10)
     ap.add_argument("--cf", type=float, default=0.1)
@@ -207,12 +192,8 @@ def main():
 
     winnow = args.winnow.lower() in ("1","true","yes","y")
 
-    if args.dataset == "adult":
-        print("[INFO] Memuat UCI Adult Income (online)…")
-        df, target = load_adult()
-    else:
-        print("[INFO] Memuat Iris (online)…")
-        df, target = load_iris()
+    print("[INFO] Memuat UCI Adult Income (online)…")
+    df, target = load_adult()
 
     print(f"[INFO] Data shape: {df.shape}, target='{target}', kelas: {df[target].nunique()}")
     _y, _yp, _prob = train_c50(
