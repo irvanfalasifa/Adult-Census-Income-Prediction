@@ -59,3 +59,9 @@ python main.py --dataset adult --trials 1
 
 # Run with boosting (25 trials) for higher accuracy (Note: visualization may be too complex)
 python main.py --dataset adult --trials 25 --mincases 10 --cf 0.1
+
+```
+### References
+* **Kohavi, R. (1996). Scaling Up the Accuracy of Naive-Bayes Classifiers: a Decision-Tree Hybrid.**
+* **[UCI Machine Learning Repository - Adult Dataset.](https://archive.ics.uci.edu/dataset/2/adult)**
+* **[C5.0 R Package Documentation.](https://cran.r-project.org/web/packages/C50/index.html)**
