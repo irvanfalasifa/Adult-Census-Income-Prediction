@@ -4,63 +4,91 @@ This repository contains an end-to-end machine learning pipeline that predicts w
 
 The project implements the **C5.0 Decision Tree algorithm**. Because the most robust implementation of C5.0 exists in R, this Python script uses `rpy2` to seamlessly execute R's `C50` and `partykit` packages within a Python environment.
 
+---
+
 ## Project Workflow (CRISP-DM Methodology)
 
 The pipeline is structured following the Cross-Industry Standard Process for Data Mining (CRISP-DM) framework to ensure a clear, reproducible, and robust workflow.
 
 ### 1. Business Understanding
-* **Objective:** Predict if a person's income falls into the `>50K` or `<=50K` bracket.
-* **Use Case:** Demographic analysis, targeted marketing, and understanding socio-economic factors driving income levels.
-* **Success Criteria:** Achieving high predictive accuracy and generating a highly interpretable decision tree that explains the splitting rules clearly.
+* **Objective:** Predict if a person's annual income falls into the high-income bracket (`>50K`) or base-income bracket (`<=50K`) using census attributes.
+* **Use Case:** Socio-economic analysis, targeted financial services, and identifying key demographic drivers of wealth distribution.
+* **Success Criteria:** Achieving robust predictive accuracy (>85%) while maintaining high model interpretability through a transparent decision tree structure.
 
 ### 2. Data Understanding
 * **Data Source:** [UCI Adult Income Dataset](https://archive.ics.uci.edu/dataset/2/adult).
-* **Collection Method:** The script automates data retrieval by fetching the raw data directly from UCI's online databases (with GitHub mirrors as a fallback) using the `requests` library. No manual downloading is required.
-* **Features:** 14 attributes including demographic (age, sex, race, native_country), educational (education, education_num), occupational (workclass, occupation), and financial (capital_gain, capital_loss, hours_per_week) data.
+* **Collection:** Automated online fetching via Python's `requests` library directly from UCI databases (with GitHub mirrors as fallback).
+* **Attributes:** 14 features spanning demographics (age, sex, race, native_country), education (education, education_num), occupation (workclass, occupation, relationship), and financial status (capital_gain, capital_loss, hours_per_week), with `income` as the target label.
 
 ### 3. Data Preparation
-Data cleaning and preprocessing are handled natively in Python using `pandas` before passing the data to R:
-* **Standardization:** Trims leading/trailing whitespaces from all string (object) columns and removes the trailing period (`.`) from the test set labels to ensure consistency between train and test splits.
-* **Missing Value Handling:** Identifies unknown values (often represented as `?` or `nan` in this dataset), converts them to true `NaN` objects, and drops the incomplete rows to maintain data integrity.
-* **Data Type Casting:** Enforces strict numeric types for continuous variables (`age`, `fnlwgt`, `education_num`, `capital_gain`, `capital_loss`, `hours_per_week`) and converts categorical features to strings compatible with R factors.
-* **Data Splitting:** Splits the cleaned dataset into **75% Training Data** and **25% Testing Data** using `scikit-learn`'s `train_test_split`. The split uses `stratify=y` to ensure the income class distribution remains balanced across both sets.
+* **Data Cleaning:** Handled via `pandas`. Rows containing missing values (`?` or `nan`) were dropped, reducing the dataset from 48,842 to a clean total of **45,222 rows**.
+* **Normalization:** Whitespaces in string features were stripped, and trailing periods (`.`) in test labels were removed for uniformity.
+* **Data Splitting:** Using `scikit-learn`, the dataset was divided into:
+  * **Training Data:** 75% (**33,916 cases**) used for model construction.
+  * **Testing Data:** 25% (**11,306 cases**) reserved for unbiased out-of-sample evaluation.
+  * **Stratification:** Applied `stratify=y` to preserve the natural class imbalance ratio across both splits.
 
 ### 4. Modeling
-* **Algorithm:** C5.0 Classification Model.
-* **Integration:** Python passes the preprocessed DataFrames to the R environment using `rpy2` local converters. 
-* **Hyperparameters:** Configurable via command-line arguments (CLI), including:
-  * `trials`: Number of boosting iterations (default is 1 for a clean, single-tree visualization).
-  * `minCases`: Minimum number of samples required to split a node.
-  * `CF`: Confidence factor for pruning.
-  * `winnow`: Attribute selection toggle.
-* **Visualization:** The model automatically renders the generated decision tree into a high-resolution PDF file (`c50_tree_visualization.pdf`) directly from the R environment using the `partykit` plotting engine.
+* **Algorithm:** C5.0 Decision Tree Classifier (executed via R's `C50` package).
+* **Hyperparameters:** Configured with `trials = 1` (single tree configuration optimized for clear graphical interpretation), `minCases = 10`, and `CF = 0.1` for pruning.
+* **Visualization:** Automatically renders a detailed graphical tree into a high-resolution PDF file (`c50_tree_visualization.pdf`) using the R `partykit` package.
 
-### 5. Evaluation
-The R model predicts classes and probabilities for the test set, which are then passed back to Python for evaluation using `scikit-learn`. The script outputs:
-* **Accuracy Score:** Overall correctness of the model.
-* **Classification Report:** Detailed Precision, Recall, and F1-Scores for both `<=50K` and `>50K` classes.
-* **Confusion Matrix:** True Positives, True Negatives, False Positives, and False Negatives.
-* **ROC-AUC Score:** Evaluates the model's ability to distinguish between the two classes based on predicted probabilities.
+---
 
-### 6. Deployment / Usage
-The script is designed to run directly from the terminal with customizable arguments.
+## Program Output & Evaluation Results
 
-#### Prerequisites
-You need both Python and R installed on your system.
+When executed, the program successfully trains the model on the training set and evaluates it against the unseen testing dataset. Below is the detailed breakdown of the output and metrics:
+
+### 1. Training Performance & Attribute Usage
+* **Tree Complexity:** The resulting decision tree has a size of **34 terminal nodes (leaves)** with a training error rate of **13.1%** (4,435 misclassifications out of 33,916 training cases).
+* **Feature Importance (Attribute Usage):** The C5.0 algorithm evaluated feature relevance across splits as follows:
+  1. `capital_gain`: **100.00%** (Primary splitting driver)
+  2. `relationship`: **95.62%**
+  3. `capital_loss`: **95.25%**
+  4. `education_num`: **39.71%**
+  5. `age`: **32.53%**
+  6. `occupation`: **30.23%**
+  7. `hours_per_week`: **27.81%**
+  8. `workclass`: **18.78%**
+
+### 2. Test Set Evaluation Metrics (11,306 Cases)
+* **Overall Accuracy:** **86.09%** (indicating strong generalizability on unseen data).
+* **Classification Report:**
+  * **Class `<=50K`:** Precision = `0.8801`, Recall = `0.9436`, F1-Score = `0.9107` (Support: 8,504)
+  * **Class `>50K`:** Precision = `0.7807`, Recall = `0.6099`, F1-Score = `0.6848` (Support: 2,802)
+* **Confusion Matrix:**
+  * True Negatives (`<=50K` correctly predicted): **8,024**
+  * False Positives (`<=50K` misclassified as `>50K`): **480**
+  * False Negatives (`>50K` misclassified as `<=50K`): **1,093**
+  * True Positives (`>50K` correctly predicted): **1,709**
+* **ROC-AUC Score:** **0.8805**, confirming excellent discriminative capability between the two income classes.
+
+---
+
+## Decision Tree Visualization Analysis (`c50_tree_visualization.pdf`)
+
+The generated PDF file visually breaks down the logic paths of the 34 terminal nodes:
+* **Root Node Split:** The root splits directly on **`capital_gain > 6849`**. Individuals exceeding this capital gain threshold are classified immediately into the `>50K` bracket.
+* **Secondary Branching:** For lower capital gains, the tree splits based on **`relationship`** status (e.g., distinguishing between family structures like husbands/wives versus single/unmarried individuals).
+* **Deep Subtrees:** The left and central branches descend deeply into secondary features like **`education_num`**, **`age`**, **`occupation`**, and **`hours_per_week`**. For instance, individuals with higher education years (`education_num > 12`) combined with sustained weekly working hours (`hours_per_week > 30`) and specific managerial/professional occupations show higher probabilities of crossing the $50K threshold.
+* **Terminal Leaf Probabilities:** Each leaf node in the PDF contains a probability bar chart representing the model's confidence distribution (`<=50K` vs `>50K`) for subsets falling into that specific rule.
+
+---
+
+## Machine Learning Conclusions
+
+1. **Financial Indicators Dominate Wealth Classification:** `capital_gain` and `capital_loss` serve as the absolute strongest predictors for earning above $50K/year, appearing in over 95% of model splitting decisions.
+2. **Socio-Demographic Interaction:** Family structure (`relationship`) and educational attainment (`education_num`) act as critical structural filters that shape baseline earning potential before occupation and weekly workload are factored in.
+3. **Model Reliability:** With an accuracy of **86.09%** and an AUC of **0.8805**, the C5.0 decision tree proves to be a highly effective, transparent classifier for demographic data without requiring black-box complexity.
+
+---
+
+## How to Run
+
+### Prerequisites
 * **Python Libraries:** `pandas`, `numpy`, `requests`, `scikit-learn`, `rpy2`
 * **R Packages:** `C50`, `partykit`
 
-#### Execution
-Run the script via terminal. It will automatically download the data, train the model, print the evaluation metrics, and generate the PDF visualization.
-
-```bash
-# Run with default settings (Adult dataset, single tree for visualization)
-python main.py --dataset adult --trials 1
-
-# Run with boosting (25 trials) for higher accuracy (Note: visualization may be too complex)
-python main.py --dataset adult --trials 25 --mincases 10 --cf 0.1
-
-```
 ### References
 * **Kohavi, R. (1996). Scaling Up the Accuracy of Naive-Bayes Classifiers: a Decision-Tree Hybrid.**
 * **[UCI Machine Learning Repository - Adult Dataset.](https://archive.ics.uci.edu/dataset/2/adult)**
