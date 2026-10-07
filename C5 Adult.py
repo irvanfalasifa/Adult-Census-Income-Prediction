@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 C5.0 dari Python (rpy2) menggunakan DATA ONLINE tanpa download manual.
 Revisi: Fokus 100% pada dataset Adult Income, loader robust, dan visualisasi PDF.
