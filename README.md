@@ -1,5 +1,10 @@
 # Adult Census Income Prediction using C5.0 (Python & R Integration)
 
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Machine Learning](https://img.shields.io/badge/Machine%20Learning-Classification-orange)
+![Scikit-Learn](https://img.shields.io/badge/Library-rpy2-yellow)
+![TabPFN](https://img.shields.io/badge/Decision%20Tree-C5.0-brightgreen)
+
 This repository contains an end-to-end machine learning pipeline that predicts whether an individual's annual income exceeds $50K/yr based on demographic and financial census data. 
 
 The project implements the **C5.0 Decision Tree algorithm**. Because the most robust implementation of C5.0 exists in R, this Python script uses `rpy2` to seamlessly execute R's `C50` and `partykit` packages within a Python environment.
